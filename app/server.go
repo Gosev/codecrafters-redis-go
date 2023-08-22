@@ -31,7 +31,7 @@ func newValue(value string, expiry int) *val {
 		p := val{value: value}
 
 		if (expiry > 0) {
-			p.expiry = time.Now().Unix() + int64(expiry);
+			p.expiry = time.Now().UnixMilli() + int64(expiry);
 		} else {
 			p.expiry = 0;
 		}
@@ -46,7 +46,7 @@ func getValue(key string, memoryMap map[string]*val) string {
 		return ""
 	}
 
-	if (val.expiry > 0 && val.expiry < time.Now().Unix()) {
+	if (val.expiry > 0 && val.expiry < time.Now().UnixMilli()) {
 		memoryMap[key] = nil;
 		return "";
 	}
@@ -93,6 +93,7 @@ func handle(conn net.Conn, memoryMap map[string]*val) {
 
 					subCommand := strings.ToLower(stringBits[8]);
 
+					// px is ttl in milliseconds
 					if (subCommand  == "px") {
 						exp, convError :=  strconv.Atoi(stringBits[10])
 
