@@ -18,7 +18,8 @@ type val struct {
 func reply(conn net.Conn, msg string) {
 
 	if (msg == "") {
-		conn.Write([]byte("_\r\n"));
+		//conn.Write([]byte("_\r\n"));
+		conn.Write([]byte("*-1\r\n"));
 		return;
 	}
 
