@@ -8,7 +8,13 @@ import (
 )
 
 
-func handle(conn net.Conn) {
+func reply(conn net.Conn, msg string) {
+	ret := "+" + msg + "\r\n";
+	conn.Write([]byte(ret));
+}
+
+
+func handle(conn net.Conn, memoryMap map[string]string) {
 
 	fmt.Printf("Listening on host: %s, port: %s\n", "0.0.0.0", "6379")
 
@@ -33,22 +39,30 @@ func handle(conn net.Conn) {
 
 		stringBits := strings.Split(str, "\r\n")
 
-
-
 		firstSignificantItem := strings.ToLower(stringBits[2]);
 
 		switch firstSignificantItem {
 
 			case "ping":
-				conn.Write([]byte("+PONG\r\n"));
+				reply(conn, "PONG");
+
+			case "set":
+				key :=  stringBits[4]
+				value :=  stringBits[6]
+				memoryMap[key] = value
+				reply(conn, "OK");
+
+			case "get":
+				key :=  stringBits[4]
+				reply(conn, memoryMap[key]);
+
 
 			case "echo":
-
-				msg := "+" + stringBits[4] + "\r\n";
-				conn.Write([]byte(msg));
+				reply(conn, stringBits[4]);
 
 			default:
-				conn.Write([]byte("+OK\r\n"));
+				reply(conn, "OK");
+
 
 		}
 
@@ -67,6 +81,8 @@ func main() {
 	 	os.Exit(1)
 	}
 
+	memoryMap := make(map[string]string)
+
 
 	for true {
 		conn, err := l.Accept()
@@ -76,7 +92,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handle(conn);
+		go handle(conn, memoryMap);
 	}
 
 
