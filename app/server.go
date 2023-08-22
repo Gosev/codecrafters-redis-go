@@ -4,17 +4,57 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
+type val struct {
+	value string
+	createdAt  int
+	expiry int64
+}
 
 func reply(conn net.Conn, msg string) {
-	ret := "+" + msg + "\r\n";
-	conn.Write([]byte(ret));
+
+	if (msg == "") {
+		conn.Write([]byte("_\r\n"));
+		return;
+	}
+
+	conn.Write([]byte("+" + msg + "\r\n"));
 }
 
 
-func handle(conn net.Conn, memoryMap map[string]string) {
+func newValue(value string, expiry int) *val {
+
+		p := val{value: value}
+
+		if (expiry > 0) {
+			p.expiry = time.Now().Unix() + int64(expiry);
+		} else {
+			p.expiry = 0;
+		}
+		return &p
+}
+
+func getValue(key string, memoryMap map[string]*val) string {
+
+	val := memoryMap[key];
+
+	if (val == nil) {
+		return ""
+	}
+
+	if (val.expiry > 0 && val.expiry < time.Now().Unix()) {
+		memoryMap[key] = nil;
+		return "";
+	}
+
+	return val.value;
+}
+
+func handle(conn net.Conn, memoryMap map[string]*val) {
 
 	fmt.Printf("Listening on host: %s, port: %s\n", "0.0.0.0", "6379")
 
@@ -23,8 +63,6 @@ func handle(conn net.Conn, memoryMap map[string]string) {
 	for true {
 
 		_, readerr  := conn.Read(buf);
-
-		//fmt.Printf("Reading input : %s\n", buf);
 
 		if readerr != nil {
 			fmt.Println("Error reading: ", readerr.Error())
@@ -49,12 +87,30 @@ func handle(conn net.Conn, memoryMap map[string]string) {
 			case "set":
 				key :=  stringBits[4]
 				value :=  stringBits[6]
-				memoryMap[key] = value
+        var expiry = 0;
+
+				if (len(stringBits) >= 10) {
+
+					subCommand := strings.ToLower(stringBits[8]);
+
+					if (subCommand  == "px") {
+						exp, convError :=  strconv.Atoi(stringBits[10])
+
+						if convError != nil {
+							fmt.Println("Error reading expiry: ", convError.Error())
+							exp = 0
+						}
+						expiry = exp;
+					}
+					fmt.Printf("Expiry : %d\n", expiry)
+				}
+
+				memoryMap[key] = newValue(value, expiry)
 				reply(conn, "OK");
 
 			case "get":
 				key :=  stringBits[4]
-				reply(conn, memoryMap[key]);
+				reply(conn, getValue(key, memoryMap));
 
 
 			case "echo":
@@ -81,8 +137,7 @@ func main() {
 	 	os.Exit(1)
 	}
 
-	memoryMap := make(map[string]string)
-
+	memoryMap := make(map[string]*val)
 
 	for true {
 		conn, err := l.Accept()
