@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 
@@ -15,15 +16,41 @@ func handle(conn net.Conn) {
 
 	for true {
 
-		size, readerr  := conn.Read(buf);
+		_, readerr  := conn.Read(buf);
 
-		fmt.Printf("Read : %d\n", size);
+		//fmt.Printf("Reading input : %s\n", buf);
+
 		if readerr != nil {
 			fmt.Println("Error reading: ", readerr.Error())
 			break;
 		}
 
-		conn.Write([]byte("+PONG\r\n"));
+		str := string(buf);
+
+
+		array_size := buf[1] - '0';
+		fmt.Printf("Message word count : %d\n", array_size)
+
+		stringBits := strings.Split(str, "\r\n")
+
+
+
+		firstSignificantItem := strings.ToLower(stringBits[2]);
+
+		switch firstSignificantItem {
+
+			case "ping":
+				conn.Write([]byte("+PONG\r\n"));
+
+			case "echo":
+
+				msg := "+" + stringBits[4] + "\r\n";
+				conn.Write([]byte(msg));
+
+			default:
+				conn.Write([]byte("+OK\r\n"));
+
+		}
 
 	}
 }
