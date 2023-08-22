@@ -29,8 +29,6 @@ func main() {
 
 	buf := make([]byte, 1024);
 
-	conn.Write([]byte("+PONG\r\n"));
-
 	for i := 0; i < 10; i++ {
 		size, readerr  := conn.Read(buf);
 		fmt.Printf("Read : %d\n", size);
